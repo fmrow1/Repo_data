@@ -40,61 +40,53 @@ for filing_url in document_link["filing_url"]:
     soup = BeautifulSoup(response.content, "xml")
 
     entries = soup.find_all("scheduleOfPortfolioSecuritiesInfo")
-    df_cols = ["Repo_id", "Buyer", "SeriesID", "Category", "Repo_issuer", "Repo_principal", "Return", "Date", "Repo_maturity", "Weekly_liquid", "Daily_liquid", "Collateral_issuer", "Collateral_principal", "Collateral_value", "Collateral_maturity", "Collateral_yield", "indicator"]
+    df_cols = ["Repo_id", "Buyer", "SeriesID", "Category", "Repo_issuer", "Repo_principal", "Return", "Date", "Repo_maturity", "Weekly_liquid", "Daily_liquid", "Collateral_issuer", "Collateral_principal", "Collateral_value", "Collateral_maturity", "Collateral_yield", "Collateral_category"]
     rows = []
 
     for repo in entries:
         count_repo += 1
         if repo.find("investmentCategory").text == "Other Repurchase Agreement, if any collateral falls outside Treasury, Government Agency and cash":
             for collateral in repo.find_all("collateralIssuers"):
-                if collateral.find("ctgryInvestmentsRprsntsCollateral").text == "Corporate Debt Securities":
-                    indicator = 0
-                    C_issuer = collateral.find("nameOfCollateralIssuer").text
-                    Issuer = repo.find("nameOfIssuer").text
-                    Return = repo.find("yieldOfTheSecurityAsOfReportingDate").text
-                    buyer = soup.find("cik").text
-                    date = soup.find("reportDate").text
-                    SID = soup.find("seriesId").text
-                    Category = soup.find("moneyMarketFundCategory").text
-                    principal = collateral.find("principalAmountToTheNearestCent").text
-                    collateralvalue = collateral.find("valueOfCollateralToTheNearestCent").text
-                    repo_principal = repo.find("includingValueOfAnySponsorSupport").text
-                    repo_maturity = repo.find("finalLegalInvestmentMaturityDate").text
-                    weekly_liquid = repo.find("weeklyLiquidAssetSecurityFlag").text
-                    daily_liquid = repo.find("dailyLiquidAssetSecurityFlag").text
+                # Capture the actual collateral category for all types
+                collateral_category = collateral.find("ctgryInvestmentsRprsntsCollateral").text
+
+                C_issuer = collateral.find("nameOfCollateralIssuer").text
+                principal = collateral.find("principalAmountToTheNearestCent").text
+                collateralvalue = collateral.find("valueOfCollateralToTheNearestCent").text
+
+                # Try to extract maturity for all collateral types
+                try:
+                    collateral_maturity = collateral.find("nmfp2common:from").text
+                except AttributeError:
                     try:
-                        collateral_maturity = collateral.find("nmfp2common:from").text
+                        collateral_maturity = collateral.find("date").text
                     except AttributeError:
-                        try:
-                            collateral_maturity = collateral.find("date").text
-                        except AttributeError:
-                            collateral_maturity = False
-                    collateral_yield = collateral.find("couponOrYield").text
-                    rows.append({"Repo_id": count_repo, "Buyer": buyer, "SeriesID": SID, "Category": Category, "Repo_issuer": Issuer, "Repo_principal": repo_principal, "Return": Return, "Date": date, "Repo_maturity": repo_maturity, "Weekly_liquid": weekly_liquid, "Daily_liquid": daily_liquid, "Collateral_issuer": C_issuer, "Collateral_principal": principal, "Collateral_value": collateralvalue, "Collateral_maturity": collateral_maturity, "Collateral_yield": collateral_yield, "indicator": indicator})
-                else:
-                    indicator = 1
-                    C_issuer = collateral.find("nameOfCollateralIssuer").text
-                    Issuer = repo.find("nameOfIssuer").text
-                    Return = repo.find("yieldOfTheSecurityAsOfReportingDate").text
-                    buyer = soup.find("cik").text
-                    SID = soup.find("seriesId").text
-                    Category = soup.find("moneyMarketFundCategory").text
-                    date = soup.find("reportDate").text
-                    principal = collateral.find("principalAmountToTheNearestCent").text
-                    collateralvalue = collateral.find("valueOfCollateralToTheNearestCent").text
-                    collateral_maturity = False
-                    collateral_yield = False
-                    repo_principal = repo.find("includingValueOfAnySponsorSupport").text
-                    repo_maturity = repo.find("finalLegalInvestmentMaturityDate").text
-                    weekly_liquid = repo.find("weeklyLiquidAssetSecurityFlag").text
-                    daily_liquid = repo.find("dailyLiquidAssetSecurityFlag").text
-                    rows.append({"Repo_id": count_repo, "Buyer": buyer, "SeriesID": SID, "Category": Category, "Repo_issuer": Issuer, "Repo_principal": repo_principal, "Return": Return, "Date": date, "Repo_maturity": repo_maturity, "Weekly_liquid": weekly_liquid, "Daily_liquid": daily_liquid, "Collateral_issuer": C_issuer, "Collateral_principal": principal, "Collateral_value": collateralvalue, "Collateral_maturity": collateral_maturity, "Collateral_yield": collateral_yield, "indicator": indicator})
+                        collateral_maturity = False
+
+                # Try to extract yield for all collateral types
+                yield_tag = collateral.find("couponOrYield")
+                collateral_yield = yield_tag.text if yield_tag else False
+
+                # Repo-level fields
+                Issuer = repo.find("nameOfIssuer").text
+                Return = repo.find("yieldOfTheSecurityAsOfReportingDate").text
+                repo_principal = repo.find("includingValueOfAnySponsorSupport").text
+                repo_maturity = repo.find("finalLegalInvestmentMaturityDate").text
+                weekly_liquid = repo.find("weeklyLiquidAssetSecurityFlag").text
+                daily_liquid = repo.find("dailyLiquidAssetSecurityFlag").text
+
+                # Fund-level fields from the filing header
+                buyer = soup.find("cik").text
+                date = soup.find("reportDate").text
+                SID = soup.find("seriesId").text
+                Category = soup.find("moneyMarketFundCategory").text
+
+                rows.append({"Repo_id": count_repo, "Buyer": buyer, "SeriesID": SID, "Category": Category, "Repo_issuer": Issuer, "Repo_principal": repo_principal, "Return": Return, "Date": date, "Repo_maturity": repo_maturity, "Weekly_liquid": weekly_liquid, "Daily_liquid": daily_liquid, "Collateral_issuer": C_issuer, "Collateral_principal": principal, "Collateral_value": collateralvalue, "Collateral_maturity": collateral_maturity, "Collateral_yield": collateral_yield, "Collateral_category": collateral_category})
 
     i += 1
 
     full = pd.DataFrame(rows, columns=df_cols)
-    full1 = full.groupby("Repo_id").filter(lambda x: x["indicator"].mean() == 0)
-    collection.append(full1)
+    collection.append(full)
 
     j += 1
     print(j)
@@ -124,7 +116,9 @@ if collection:
     df["Collateral_issuer_clear"] = c
     df["Collateral_issuer_1"] = d
 
-    df.to_excel("Repo2020NW.xlsx")
-    print(f"\nDone. {len(df)} rows saved to Repo2020NW.xlsx")
+    df.to_csv("Repo_non_treasury.csv", index=False)
+    print(f"\nDone. {len(df)} rows saved to Repo_non_treasury.csv")
+    print("\nCollateral category breakdown:")
+    print(df["Collateral_category"].value_counts().to_string())
 else:
     print("No data collected.")
