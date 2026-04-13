@@ -135,7 +135,9 @@ ax_table.set_title(
 footnotes = (
     "1. Only repurchase agreements with a single collateral type are considered.\n"
     "2. Haircut is calculated as the difference between sum of the collateral value "
-    "and repo value over sum of collateral value."
+    "and repo value over sum of collateral value.\n"
+    "3. Observations with only U.S. Treasury collateral appear erroneous since parsing "
+    "code should have explicitly filtered to repo agreements that were designated as Non-Treasury Repos."
 )
 ax_notes.text(0, 1, footnotes, fontsize=7.5, color="black",
               verticalalignment="top", transform=ax_notes.transAxes)
