@@ -92,3 +92,55 @@ print(summary.to_string())
 
 summary.to_csv("summary_stats.csv")
 print("\nSaved to summary_stats.csv")
+
+# ── EXPORT TABLE AS IMAGE AND PDF ─────────────────────────────────────────────
+import matplotlib
+matplotlib.use("Agg")  # non-interactive backend
+import matplotlib.pyplot as plt
+
+fig = plt.figure(figsize=(12, 5))
+gs = fig.add_gridspec(2, 1, height_ratios=[5, 1], hspace=0)
+ax_table = fig.add_subplot(gs[0])
+ax_notes = fig.add_subplot(gs[1])
+
+ax_table.axis("off")
+ax_notes.axis("off")
+
+table = ax_table.table(
+    cellText=summary.reset_index().values,
+    colLabels=["Collateral Type", "N Repos", "Avg Yield (%)", "Avg Haircut (%)"],
+    cellLoc="center",
+    loc="center",
+)
+table.auto_set_font_size(False)
+table.set_fontsize(9)
+table.auto_set_column_width(col=list(range(4)))
+
+# Style header row
+for col in range(4):
+    table[(0, col)].set_facecolor("#2c3e50")
+    table[(0, col)].set_text_props(color="white", fontweight="bold")
+
+# Alternate row shading
+for row in range(1, len(summary) + 1):
+    colour = "#f2f2f2" if row % 2 == 0 else "white"
+    for col in range(4):
+        table[(row, col)].set_facecolor(colour)
+
+ax_table.set_title(
+    "Non-Treasury Repurchase Agreements from January 2020 Filings (N-MFP2)",
+    fontsize=11, fontweight="bold", pad=12
+)
+
+footnotes = (
+    "1. Only repurchase agreements with a single collateral type are considered.\n"
+    "2. Haircut is calculated as the difference between sum of the collateral value "
+    "and repo value over sum of collateral value."
+)
+ax_notes.text(0, 1, footnotes, fontsize=7.5, color="black",
+              verticalalignment="top", transform=ax_notes.transAxes)
+
+plt.tight_layout()
+
+fig.savefig("summary_stats.png", dpi=150, bbox_inches="tight")
+print("Saved to summary_stats.png")
