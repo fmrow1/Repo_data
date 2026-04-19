@@ -1,0 +1,94 @@
+DATA CLEANING LOG
+=================
+Project : N-MFP2 Repurchase Agreement Analysis
+Date    : 2026-04-19
+Author  : Filip Mrowiec
+
+
+STEP 1 — Verify January 2020 filing links (check_filing_count.py)
+------------------------------------------------------------------
+Input  : nmfp_links_jan2020.csv (418 rows)
+Check  : Re-queried SEC EDGAR full-text search API (efts.sec.gov) for
+         N-MFP2 filings filed 2020-01-01 to 2020-01-31.
+Result : EDGAR reported total = 418, relation = "eq" (exact).
+         CSV row count = 418. Counts match. PASS.
+
+
+STEP 2 — Cross-check against EDGAR full-index (check_filing_index.py)
+----------------------------------------------------------------------
+Input  : nmfp_links_jan2020.csv (418 rows)
+Check  : Downloaded SEC EDGAR quarterly full-index file for Q1 2020
+         (www.sec.gov/Archives/edgar/full-index/2020/QTR1/form.idx),
+         an independent flat-file source separate from the search API.
+         Filtered to N-MFP2 rows with filing date in January 2020.
+Result : Full-index count = 418. All 418 accession numbers present in
+         both sources with no extras or omissions. PASS.
+
+
+STEP 3 — Fetch all N-MFP2 and N-MFP2/A filings Jan 2019 – Jan 2021
+     (fetch_nmfp_links.py)
+----------------------------------------------------------------------
+Scope  : Filing date range 2019-01-01 to 2021-01-31, covering N-MFP2
+         original filings and N-MFP2/A amendments.
+Method : Three-pass approach iterating month by month to stay within
+         EDGAR's per-query result limit.
+         Pass 1 — query N-MFP2/A explicitly to collect amendment
+                  accession numbers (EDGAR search API does not expose
+                  form_type in its response payload).
+         Pass 2 — query N-MFP2 (which returns originals + amendments)
+                  to collect full filing metadata. Each row labelled
+                  N-MFP2/A if its accession number was seen in Pass 1,
+                  otherwise N-MFP2.
+         Pass 3 — add report_date column:
+                  Originals: derived as last BUSINESS day of the month
+                  prior to filed_at. Business-day adjustment is required
+                  because months ending on a weekend have a last calendar
+                  day that differs from the true report date (e.g. March
+                  2019 ended on Sunday; correct report date is 2019-03-29,
+                  not 2019-03-31). Affected months in window: Mar/Jun/
+                  Aug/Nov 2019 and Feb/May/Oct 2020.
+                  Amendments: report_date read directly from <reportDate>
+                  field in primary_doc.xml (254 HTTP requests).
+Output : nmfp_links_2019_2021.csv — 10,485 filings
+           N-MFP2:   10,231
+           N-MFP2/A:    254
+
+
+STEP 4 — Resolve amendments and produce clean filing list
+     (account_for_amendments.py)
+----------------------------------------------------------------------
+Input  : nmfp_links_2019_2021.csv (10,485 rows)
+
+Matching key: (cik, seriesId, report_date)
+  A CIK can register multiple fund series, each filing independently.
+  Matching on (cik, report_date) alone would incorrectly remove sibling
+  series' originals. seriesId is read from primary_doc.xml for:
+    - all 254 amendments, and
+    - all 384 originals that share (cik, report_date) with any amendment.
+
+Amendment chains:
+  Where multiple amendments exist for the same (cik, seriesId,
+  report_date), each is a full refile (confirmed by inspection: two RBC
+  Funds Trust amendments for 2020-01-31 both contained 230 holdings with
+  only a single-field difference). Only the most recently filed amendment
+  in each chain is retained; earlier ones are discarded.
+
+Pre-2019 amendments:
+  Amendment filings whose report_date is before 2019-01-01 are dropped.
+  Their corresponding originals pre-date our collection window and are
+  not present in the dataset.
+
+Unmatched amendments (retained):
+  Amendments whose original could not be found in the dataset. These
+  arise because the original was filed before 2019-01-01 (outside our
+  window). These amendments are kept in the output since they represent
+  valid filings for periods within scope.
+
+Results:
+  Superseded originals removed  : 201
+  Superseded amendments removed :   6  (earlier filings in chains)
+  Amendments pre-2019 dropped   :  27
+  Amendments retained           : 221
+  Unmatched amendments retained :  47  (originals pre-date window)
+
+Output : nmfp_link_2019_2020_ammended.csv
