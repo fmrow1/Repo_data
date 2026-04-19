@@ -34,7 +34,7 @@ from collections import defaultdict
 
 import requests
 
-INPUT_CSV  = "nmfp_links_2019_2021.csv"
+INPUT_CSV  = "nmfp_links_2019_2020.csv"
 OUTPUT_CSV = "nmfp_link_2019_2020_ammended.csv"
 
 FILING_BASE_URL = "https://www.sec.gov/Archives/edgar/data"

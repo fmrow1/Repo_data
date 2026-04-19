@@ -49,7 +49,7 @@ Method : Three-pass approach iterating month by month to stay within
                   Aug/Nov 2019 and Feb/May/Oct 2020.
                   Amendments: report_date read directly from <reportDate>
                   field in primary_doc.xml (254 HTTP requests).
-Output : nmfp_links_2019_2021.csv — 10,485 filings
+Output : nmfp_links_2019_2020.csv — 10,485 filings
            N-MFP2:   10,231
            N-MFP2/A:    254
 

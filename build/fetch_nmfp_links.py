@@ -36,8 +36,8 @@ import requests
 
 EDGAR_SEARCH_URL = "https://efts.sec.gov/LATEST/search-index"
 FILING_BASE_URL  = "https://www.sec.gov/Archives/edgar/data"
-OUTPUT_CSV       = "nmfp_links_2019_2021.csv"
-OUTPUT_JSON      = "nmfp_links_2019_2021.json"
+OUTPUT_CSV       = "nmfp_links_2019_2020.csv"
+OUTPUT_JSON      = "nmfp_links_2019_2020.json"
 
 RANGE_START = date(2019, 1, 1)
 RANGE_END   = date(2021, 1, 31)
