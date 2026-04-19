@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Statistical analysis of Repo_non_treasury.csv.
+Statistical analysis of Repo_non_treasury_2019_2020.csv.
 
 - Total number of unique repos
 - Number of repos with only one collateral type
@@ -9,8 +9,14 @@ Statistical analysis of Repo_non_treasury.csv.
 
 import pandas as pd
 
-df = pd.read_csv("Repo_non_treasury.csv")
+df = pd.read_csv("../build/Repo_non_treasury_2019_2020.csv")
 df["Return"] = pd.to_numeric(df["Return"], errors="coerce")
+df["Collateral_value"] = pd.to_numeric(df["Collateral_value"], errors="coerce")
+
+# Exclude observations with zero or missing collateral value
+n_before = len(df)
+df = df[df["Collateral_value"] > 0]
+print(f"Dropped {n_before - len(df)} rows with zero/missing collateral value ({n_before} → {len(df)})\n")
 
 # ── 1. TOTAL UNIQUE REPOS ─────────────────────────────────────────────────────
 total_repos = df["Repo_id"].nunique()
@@ -56,7 +62,6 @@ for cat, val in avg_yield.items():
 # ── 4. AVERAGE HAIRCUT BY COLLATERAL TYPE (single-collateral repos only) ──────
 # Haircut = (sum of collateral value - repo principal) / sum of collateral value
 # Computed per repo, then averaged by collateral type.
-df["Collateral_value"]   = pd.to_numeric(df["Collateral_value"],   errors="coerce")
 df["Repo_principal"]     = pd.to_numeric(df["Repo_principal"],     errors="coerce")
 
 df_single = df[df["Repo_id"].isin(single_type_repo_ids)]
@@ -128,7 +133,7 @@ for row in range(1, len(summary) + 1):
         table[(row, col)].set_facecolor(colour)
 
 ax_table.set_title(
-    "Non-Treasury Repurchase Agreements from January 2020 Filings (N-MFP2)",
+    "Non-Treasury Repurchase Agreements from 2019–2020 Filings (N-MFP2)",
     fontsize=11, fontweight="bold", pad=12
 )
 
@@ -136,7 +141,8 @@ footnotes = (
     "1. Only repurchase agreements with a single collateral type are considered.\n"
     "2. Haircut is calculated as the difference between sum of the collateral value "
     "and repo value over sum of collateral value.\n"
-    "3. Observations with only U.S. Treasury collateral appear erroneous since parsing "
+    "3. Observations with zero collateral value (n=76) are excluded.\n"
+    "4. Observations with only U.S. Treasury collateral appear erroneous since parsing "
     "code should have explicitly filtered to repo agreements that were designated as Non-Treasury Repos."
 )
 ax_notes.text(0, 1, footnotes, fontsize=7.5, color="black",

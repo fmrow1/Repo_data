@@ -1,11 +1,11 @@
 Collateral_category,N repos (single-type),Avg Yield (%),Avg Haircut (%)
-U.S. Treasuries (including strips),5,1.836,1.9695
-Agency Mortgage-Backed Securities,9,1.7856,2.1797
-Agency Debentures and Agency Strips,1,1.68,2.9217
-Agency Collateralized Mortgage Obligation,11,1.8091,3.4922
-Money Market,12,1.6792,4.0312
-Other Instrument,60,1.8842,4.9326
-Corporate Debt Securities,148,1.8501,5.7254
-Equities,96,1.8205,7.3437
-Asset-Backed Securities,31,2.111,9.455
-Private Label Collateralized Mortgage Obligations,29,2.0455,10.1613
+Agency Debentures and Agency Strips,10,1.532,2.0675
+U.S. Treasuries (including strips),288,1.6214,2.2486
+Agency Mortgage-Backed Securities,70,1.0776,2.3209
+Money Market,382,1.6243,4.0543
+Agency Collateralized Mortgage Obligation,129,1.7168,4.1879
+Other Instrument,1458,1.6926,4.9977
+Corporate Debt Securities,3004,1.5226,5.8313
+Equities,1654,1.515,7.3484
+Asset-Backed Securities,526,2.0074,8.7691
+Private Label Collateralized Mortgage Obligations,437,1.6711,8.9833

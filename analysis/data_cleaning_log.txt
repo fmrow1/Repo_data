@@ -1,0 +1,16 @@
+DATA CLEANING LOG — ANALYSIS
+=============================
+Dataset : Repo_non_treasury_2019_2020.csv
+Date    : 2026-04-19
+
+
+STEP 1 — Exclude zero collateral value observations
+-----------------------------------------------------
+Rows before : 444,111
+Rows dropped :      76  (Collateral_value == 0 or missing)
+Rows after  : 444,035
+
+Reason: A collateral value of zero causes a divide-by-zero in the haircut
+calculation (haircut = (collateral_value - repo_principal) / collateral_value)
+producing -inf results. These observations are considered erroneous and are
+excluded from all analysis.

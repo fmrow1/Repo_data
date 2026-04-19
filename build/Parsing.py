@@ -72,12 +72,13 @@ for filing_url in document_link["filing_url"]:
                 collateral_yield = yield_tag.text if yield_tag else False
 
                 # Repo-level fields
-                Issuer = repo.find("nameOfIssuer").text
-                Return = repo.find("yieldOfTheSecurityAsOfReportingDate").text
-                repo_principal = repo.find("includingValueOfAnySponsorSupport").text
-                repo_maturity = repo.find("finalLegalInvestmentMaturityDate").text
-                weekly_liquid = repo.find("weeklyLiquidAssetSecurityFlag").text
-                daily_liquid = repo.find("dailyLiquidAssetSecurityFlag").text
+                def _text(tag): return tag.text if tag else None
+                Issuer = _text(repo.find("nameOfIssuer"))
+                Return = _text(repo.find("yieldOfTheSecurityAsOfReportingDate"))
+                repo_principal = _text(repo.find("includingValueOfAnySponsorSupport"))
+                repo_maturity = _text(repo.find("finalLegalInvestmentMaturityDate"))
+                weekly_liquid = _text(repo.find("weeklyLiquidAssetSecurityFlag"))
+                daily_liquid = _text(repo.find("dailyLiquidAssetSecurityFlag"))
 
                 # Fund-level fields from the filing header
                 buyer = soup.find("cik").text
