@@ -1,0 +1,9 @@
+# Analysis output charts
+analysis/*.png
+
+# Stale build artefacts
+build/nmfp_links_2019_2021.json
+build/nmfp_links_2019_2021_clean.csv
+
+# Session artefacts
+remote_control_qr.png
