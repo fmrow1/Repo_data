@@ -625,24 +625,32 @@ print("Saved to eq_entity_deviation_by_month.png")
 
 # ── ANALYSIS OVERVIEW TABLE ───────────────────────────────────────────────────
 overview_rows = [
-    ("Setup",   "Load data; exclude zero collateral value (n=76); add Report_month",      "—"),
-    ("1",       "Total unique repos",                                                       "Console"),
-    ("2",       "Single- vs multi-collateral repos",                                        "Console"),
-    ("3",       "Average yield by collateral type (single-type repos)",                     "Console"),
-    ("4",       "Average haircut by collateral type (single-type repos)",                   "Console"),
-    ("Table",   "Summary: N repos, avg yield, avg haircut by collateral type",              "summary_stats.png / .csv"),
-    ("5a",      "CDS interest rate distribution over time (avg, p5, p95)",                  "cds_rate_by_month.png"),
-    ("5b",      "CDS 95th−5th percentile rate spread over time",                            "cds_spread_by_month.png"),
-    ("6a",      "ABS interest rate distribution over time (avg, p5, p95)",                  "abs_rate_by_month.png"),
-    ("6b",      "ABS 95th−5th percentile rate spread over time",                            "abs_spread_by_month.png"),
-    ("7",       "Repo count by collateral type over time (≥15 obs/month shown)",            "repo_count_by_type.png"),
-    ("8",       "Counterparty name normalisation exhibit (raw → normalised → entity)",      "counterparty_names.csv"),
-    ("9",       "Equities: avg interest rate by entity and month",                          "eq_rate_by_entity.png"),
-    ("10",      "CDS: avg interest rate by entity and month",                               "cds_rate_by_entity.png"),
-    ("10b",     "CDS: max−min average rate spread across entities by month",                "cds_entity_spread_by_month.png"),
-    ("11b",     "Equities: max−min average rate spread across entities by month",           "eq_entity_spread_by_month.png"),
-    ("12",      "CDS: entity rate deviation from monthly cross-entity average",             "cds_entity_deviation_by_month.png"),
-    ("13",      "Equities: entity rate deviation from monthly cross-entity average",        "eq_entity_deviation_by_month.png"),
+    ("Setup",   "Load data; exclude zero collateral value (n=76); add Report_month",                           "—"),
+    ("1",       "Total unique repos",                                                                           "Console"),
+    ("2",       "Single- vs multi-collateral repos",                                                            "Console"),
+    ("3",       "Average yield by collateral type (single-type repos)",                                         "Console"),
+    ("4",       "Average haircut by collateral type (single-type repos)",                                       "Console"),
+    ("Table",   "Summary: N repos, avg yield, avg haircut by collateral type",                                  "summary_stats.png / .csv"),
+    ("5a",      "CDS interest rate distribution over time (avg, p5, p95)",                                      "cds_rate_by_month.png"),
+    ("5b",      "CDS 95th−5th percentile rate spread over time",                                                "cds_spread_by_month.png"),
+    ("6a",      "ABS interest rate distribution over time (avg, p5, p95)",                                      "abs_rate_by_month.png"),
+    ("6b",      "ABS 95th−5th percentile rate spread over time",                                                "abs_spread_by_month.png"),
+    ("7",       "Repo count by collateral type over time (≥15 obs/month shown)",                                "repo_count_by_type.png"),
+    ("8",       "Counterparty name normalisation exhibit (raw → normalised → entity)",                          "counterparty_names.csv"),
+    ("9",       "Equities: avg interest rate by entity and month",                                              "eq_rate_by_entity.png"),
+    ("10",      "CDS: avg interest rate by entity and month",                                                   "cds_rate_by_entity.png"),
+    ("10b",     "CDS: max−min average rate spread across entities by month",                                    "cds_entity_spread_by_month.png"),
+    ("11b",     "Equities: max−min average rate spread across entities by month",                               "eq_entity_spread_by_month.png"),
+    ("12",      "CDS: entity rate deviation from monthly cross-entity average",                                 "cds_entity_deviation_by_month.png"),
+    ("13",      "Equities: entity rate deviation from monthly cross-entity average",                            "eq_entity_deviation_by_month.png"),
+    ("14",      "Total volume by collateral type over time — single-type repos (USD bn)",                       "volume_by_collateral_type.png"),
+    ("15",      "Single-type vs multi-type repo count by month (stacked bar)",                                  "single_vs_multi_type_by_month.png"),
+    ("16",      "Total volume per entity per month — ABS+Eq+CDS+Other (≥$500m avg, USD bn)",                   "volume_by_entity.png"),
+    ("17",      "Avg interest rate by entity and month — ABS+Eq+CDS+Other",                                    "rate_by_entity_combined.png"),
+    ("18",      "Entity rate deviation from monthly cross-entity mean — ABS+Eq+CDS+Other",                     "rate_deviation_by_entity_combined.png"),
+    ("19a",     "CDS haircut distribution (histogram with p5, median, p95)",                                    "cds_haircut_distribution.png"),
+    ("19b",     "Equities haircut distribution (histogram with p5, median, p95)",                               "eq_haircut_distribution.png"),
+    ("20",      "4-panel interest rate distribution (avg, p5, p95) — Equities, CDS, ABS, Other Instrument",    "rate_distribution_4panel.png"),
 ]
 
 col_labels = ["Section", "Description", "Output"]
@@ -677,3 +685,318 @@ ax_ov.set_title("Analysis Overview — Non-Treasury Repo Study (N-MFP2, 2019–2
 plt.tight_layout()
 fig_ov.savefig("analysis_overview.png", dpi=150, bbox_inches="tight")
 print("Saved to analysis_overview.png")
+
+# ── 14. TOTAL VOLUME BY COLLATERAL TYPE OVER TIME — single-type repos ─────────
+# Volume per repo = Repo_principal (cash lent by the MMF to the counterparty).
+# Summed across all repos of each collateral type per month, expressed in USD bn.
+volume_pivot = (
+    df_single.drop_duplicates(subset="Repo_id")
+    .groupby(["Report_month", "Collateral_category"])["Repo_principal"]
+    .sum()
+    .div(1e9)                                         # → USD billions
+    .unstack("Collateral_category")
+    .fillna(0)
+    .sort_index()
+)
+
+# Keep only categories that average >= 15 repos/month (same filter as section 7)
+cats_to_keep = pivot.columns  # reuse filter from section 7
+volume_pivot = volume_pivot[[c for c in cats_to_keep if c in volume_pivot.columns]]
+
+fig_vol, ax_vol = plt.subplots(figsize=(13, 6))
+
+for cat in volume_pivot.columns:
+    ax_vol.plot(volume_pivot.index, volume_pivot[cat],
+                linewidth=2, marker="o", markersize=4, label=cat)
+
+ax_vol.set_title("Total Repo Volume by Collateral Type Over Time — Single-Type Repos",
+                 fontsize=11, fontweight="bold", pad=12)
+ax_vol.set_xlabel("Report Month", fontsize=9)
+ax_vol.set_ylabel("Total Volume (USD bn)", fontsize=9)
+ax_vol.tick_params(axis="x", rotation=45, labelsize=8)
+ax_vol.tick_params(axis="y", labelsize=8)
+ax_vol.legend(fontsize=8, bbox_to_anchor=(1.01, 1), loc="upper left")
+ax_vol.grid(axis="y", linestyle="--", alpha=0.4)
+
+footnote_vol = (
+    "Volume per repo = Repo_principal (cash amount lent by the money market fund). "
+    "Only repos with a single collateral type are included. "
+    "Categories averaging fewer than 15 repos/month are excluded."
+)
+plt.tight_layout()
+fig_vol.subplots_adjust(bottom=0.18)
+fig_vol.text(0.01, 0.01, footnote_vol, fontsize=7.5, color="black",
+             verticalalignment="bottom", transform=fig_vol.transFigure)
+
+fig_vol.savefig("volume_by_collateral_type.png", dpi=150, bbox_inches="tight")
+print("Saved to volume_by_collateral_type.png")
+
+# ── 15. SINGLE-TYPE VS MULTI-TYPE REPO SPLIT BY MONTH ─────────────────────────
+df_repo_type = df.drop_duplicates(subset="Repo_id")[["Repo_id", "Report_month"]].copy()
+df_repo_type["Type"] = df_repo_type["Repo_id"].map(collateral_types_per_repo).apply(
+    lambda n: "Single-type" if n == 1 else "Multi-type"
+)
+
+split = (
+    df_repo_type.groupby(["Report_month", "Type"])["Repo_id"]
+    .count()
+    .unstack("Type")
+    .fillna(0)
+    .sort_index()
+)
+
+fig_sp, ax_sp = plt.subplots(figsize=(13, 5))
+
+ax_sp.bar(split.index, split["Single-type"], label="Single-type",
+          color="#2980b9", alpha=0.85)
+ax_sp.bar(split.index, split["Multi-type"], bottom=split["Single-type"],
+          label="Multi-type", color="#e74c3c", alpha=0.85)
+
+ax_sp.set_title("Number of Repos by Month — Single-Type vs Multi-Type Collateral",
+                fontsize=11, fontweight="bold", pad=12)
+ax_sp.set_xlabel("Report Month", fontsize=9)
+ax_sp.set_ylabel("Number of Repos", fontsize=9)
+ax_sp.tick_params(axis="x", rotation=45, labelsize=8)
+ax_sp.tick_params(axis="y", labelsize=8)
+ax_sp.legend(fontsize=9)
+ax_sp.grid(axis="y", linestyle="--", alpha=0.4)
+
+plt.tight_layout()
+fig_sp.savefig("single_vs_multi_type_by_month.png", dpi=150, bbox_inches="tight")
+print("Saved to single_vs_multi_type_by_month.png")
+
+# ── 16. TOTAL VOLUME PER ENTITY PER MONTH — ABS + Equities + CDS (combined) ──
+CATS_VOL = ["Asset-Backed Securities", "Equities", "Corporate Debt Securities", "Other Instrument"]
+df_entity_vol = df_single[df_single["Collateral_category"].isin(CATS_VOL)]
+df_entity_vol = df_entity_vol.drop_duplicates(subset="Repo_id").copy()
+df_entity_vol["Entity"] = df_entity_vol["Repo_issuer"].map(issuer_to_entity)
+
+all_months_vol = sorted(df_entity_vol["Report_month"].unique())
+
+entity_monthly_vol = (
+    df_entity_vol.groupby(["Entity", "Report_month"])["Repo_principal"]
+    .sum()
+    .div(1e9)
+    .unstack("Report_month")
+    .reindex(columns=all_months_vol)
+)
+
+# Keep only entities present in both March and April 2020
+# and averaging at least $200m volume per month
+entity_monthly_vol = entity_monthly_vol[
+    entity_monthly_vol["2020-03"].notna() & entity_monthly_vol["2020-04"].notna()
+]
+entity_monthly_vol = entity_monthly_vol[entity_monthly_vol.mean(axis=1) >= 0.5]
+
+fig_ev, ax_ev = plt.subplots(figsize=(14, 6))
+
+for entity, row in entity_monthly_vol.iterrows():
+    ax_ev.plot(all_months_vol, row.values,
+               linewidth=1.8, marker="o", markersize=4, label=entity)
+
+ax_ev.set_title("Total Repo Volume by Counterparty and Month — ABS + Equities + Corporate Debt (USD bn)",
+                fontsize=11, fontweight="bold", pad=12)
+ax_ev.set_xlabel("Report Month", fontsize=9)
+ax_ev.set_ylabel("Total Volume (USD bn)", fontsize=9)
+ax_ev.tick_params(axis="x", rotation=45, labelsize=8)
+ax_ev.tick_params(axis="y", labelsize=8)
+ax_ev.legend(fontsize=7.5, bbox_to_anchor=(1.01, 1), loc="upper left")
+ax_ev.grid(axis="y", linestyle="--", alpha=0.4)
+
+plt.tight_layout()
+fig_ev.savefig("volume_by_entity.png", dpi=150, bbox_inches="tight")
+print("Saved to volume_by_entity.png")
+
+# ── 17. AVERAGE INTEREST RATE BY ENTITY — ABS + Equities + CDS (combined) ────
+df_rate_combined = df_single[df_single["Collateral_category"].isin(CATS_VOL)]
+df_rate_combined = df_rate_combined.drop_duplicates(subset="Repo_id").copy()
+df_rate_combined["Entity"] = df_rate_combined["Repo_issuer"].map(issuer_to_entity)
+
+all_months_comb = sorted(df_rate_combined["Report_month"].unique())
+
+entity_rate_combined = (
+    df_rate_combined.groupby(["Entity", "Report_month"])["Return"]
+    .mean()
+    .mul(100)
+    .unstack("Report_month")
+    .reindex(columns=all_months_comb)
+)
+
+# Keep only entities present in both March and April 2020
+entity_rate_combined = entity_rate_combined[
+    entity_rate_combined["2020-03"].notna() & entity_rate_combined["2020-04"].notna()
+]
+
+MARKERS = ['o', 's', '^', 'D', 'v', 'P', 'X', 'h', '*', '<', '>', 'p', 'H']
+COLORS  = ['#1f77b4','#ff7f0e','#2ca02c','#d62728','#9467bd',
+           '#8c564b','#e377c2','#7f7f7f','#bcbd22','#17becf',
+           '#aec7e8','#ffbb78','#98df8a','#ff9896','#c5b0d5']
+
+def entity_styles(entities):
+    """Assign each entity a unique color and a unique marker independently."""
+    return {
+        e: (COLORS[i % len(COLORS)], MARKERS[i % len(MARKERS)])
+        for i, e in enumerate(entities)
+    }
+
+styles_rc = entity_styles(entity_rate_combined.index.tolist())
+
+fig_rc, ax_rc = plt.subplots(figsize=(14, 6))
+
+for entity, row in entity_rate_combined.iterrows():
+    c, m = styles_rc[entity]
+    ax_rc.plot(all_months_comb, row.values,
+               linewidth=1.8, marker=m, markersize=5, color=c, label=entity)
+
+ax_rc.set_title("Average Interest Rate by Counterparty and Month — ABS + Equities + Corporate Debt + Other Instrument",
+                fontsize=11, fontweight="bold", pad=12)
+ax_rc.set_xlabel("Report Month", fontsize=9)
+ax_rc.set_ylabel("Average Interest Rate (%)", fontsize=9)
+ax_rc.tick_params(axis="x", rotation=45, labelsize=8)
+ax_rc.tick_params(axis="y", labelsize=8)
+ax_rc.legend(fontsize=7.5, bbox_to_anchor=(1.01, 1), loc="upper left")
+ax_rc.grid(axis="y", linestyle="--", alpha=0.4)
+
+plt.tight_layout()
+fig_rc.savefig("rate_by_entity_combined.png", dpi=150, bbox_inches="tight")
+print("Saved to rate_by_entity_combined.png")
+
+# ── 18. ENTITY RATE DEVIATION FROM CROSS-ENTITY AVERAGE — ABS + EQ + CDS ─────
+combined_monthly_mean = entity_rate_combined.mean(axis=0)
+combined_deviations = entity_rate_combined.subtract(combined_monthly_mean, axis=1)
+
+styles_dev = entity_styles(combined_deviations.index.tolist())
+
+fig_dev, ax_dev = plt.subplots(figsize=(14, 6))
+
+for entity, row in combined_deviations.iterrows():
+    c, m = styles_dev[entity]
+    ax_dev.plot(all_months_comb, row.values,
+                linewidth=1.8, marker=m, markersize=5, color=c, label=entity)
+
+ax_dev.axhline(0, color="black", linewidth=1, linestyle="--", alpha=0.5)
+
+ax_dev.set_title("Entity Rate Deviation from Monthly Cross-Entity Average — ABS + Equities + Corporate Debt + Other Instrument",
+                 fontsize=11, fontweight="bold", pad=12)
+ax_dev.set_xlabel("Report Month", fontsize=9)
+ax_dev.set_ylabel("Deviation from Monthly Mean (pp)", fontsize=9)
+ax_dev.tick_params(axis="x", rotation=45, labelsize=8)
+ax_dev.tick_params(axis="y", labelsize=8)
+ax_dev.legend(fontsize=7.5, bbox_to_anchor=(1.01, 1), loc="upper left")
+ax_dev.grid(axis="y", linestyle="--", alpha=0.4)
+
+plt.tight_layout()
+fig_dev.savefig("rate_deviation_by_entity_combined.png", dpi=150, bbox_inches="tight")
+print("Saved to rate_deviation_by_entity_combined.png")
+
+# ── 19. 4-PANEL INTEREST RATE DISTRIBUTION — Equities, CDS, ABS, Other ───────
+PANEL_CATS = [
+    ("Equities",                 "Equities"),
+    ("Corporate Debt Securities","Corporate Debt Securities"),
+    ("Asset-Backed Securities",  "Asset-Backed Securities"),
+    ("Other Instrument",         "Other Instrument"),
+]
+
+fig_4p, axes_4p = plt.subplots(4, 1, figsize=(13, 18), sharex=True)
+
+for ax_p, (label, cat) in zip(axes_4p, PANEL_CATS):
+    df_cat = df_single[df_single["Collateral_category"] == cat].drop_duplicates(subset="Repo_id")
+    monthly_cat = (
+        df_cat.groupby("Report_month")["Return"]
+        .agg(
+            avg=lambda x: x.mean() * 100,
+            p5=lambda x: x.quantile(0.05) * 100,
+            p95=lambda x: x.quantile(0.95) * 100,
+        )
+        .reset_index()
+        .sort_values("Report_month")
+    )
+
+    ax_p.plot(monthly_cat["Report_month"], monthly_cat["avg"],
+              color="#2c3e50", linewidth=2, marker="o", markersize=3, label="Average")
+    ax_p.plot(monthly_cat["Report_month"], monthly_cat["p5"],
+              color="#2980b9", linewidth=1.5, linestyle="--", marker="o", markersize=2, label="5th pct")
+    ax_p.plot(monthly_cat["Report_month"], monthly_cat["p95"],
+              color="#e74c3c", linewidth=1.5, linestyle="--", marker="o", markersize=2, label="95th pct")
+    ax_p.fill_between(monthly_cat["Report_month"], monthly_cat["p5"], monthly_cat["p95"],
+                      alpha=0.08, color="#2c3e50")
+
+    ax_p.set_title(label, fontsize=10, fontweight="bold", pad=6)
+    ax_p.set_ylabel("Rate (%)", fontsize=8)
+    ax_p.tick_params(axis="y", labelsize=8)
+    ax_p.legend(fontsize=8, loc="upper right")
+    ax_p.grid(axis="y", linestyle="--", alpha=0.4)
+
+axes_4p[-1].tick_params(axis="x", rotation=45, labelsize=8)
+fig_4p.suptitle("Interest Rate Distribution by Collateral Type and Month (Avg, 5th, 95th Percentile)",
+                fontsize=12, fontweight="bold", y=1.01)
+
+plt.tight_layout()
+fig_4p.savefig("rate_distribution_4panel.png", dpi=150, bbox_inches="tight")
+print("Saved to rate_distribution_4panel.png")
+
+# ── 19. HAIRCUT DISTRIBUTION — Corporate Debt Securities ──────────────────────
+df_cds_hc_dist = df_single[df_single["Collateral_category"] == "Corporate Debt Securities"].copy()
+
+cds_hc_dist = (
+    df_cds_hc_dist.groupby("Repo_id")
+    .apply(lambda x: (x["Collateral_value"].sum() - x["Repo_principal"].iloc[0])
+                     / x["Collateral_value"].sum() * 100)
+    .reset_index(name="haircut")
+)
+
+fig_hd, ax_hd = plt.subplots(figsize=(12, 5))
+
+ax_hd.hist(cds_hc_dist["haircut"].dropna(), bins=80, color="#2c3e50", alpha=0.75, edgecolor="white", linewidth=0.3)
+
+p5  = cds_hc_dist["haircut"].quantile(0.05)
+p50 = cds_hc_dist["haircut"].quantile(0.50)
+p95 = cds_hc_dist["haircut"].quantile(0.95)
+ax_hd.axvline(p5,  color="#2980b9", linewidth=1.5, linestyle="--", label=f"5th pct  ({p5:.1f}%)")
+ax_hd.axvline(p50, color="#e74c3c", linewidth=1.5, linestyle="-",  label=f"Median   ({p50:.1f}%)")
+ax_hd.axvline(p95, color="#2980b9", linewidth=1.5, linestyle=":",  label=f"95th pct ({p95:.1f}%)")
+
+ax_hd.set_title("Haircut Distribution — Corporate Debt Securities Repos",
+                fontsize=11, fontweight="bold", pad=12)
+ax_hd.set_xlabel("Haircut (%)", fontsize=9)
+ax_hd.set_ylabel("Number of Repos", fontsize=9)
+ax_hd.tick_params(labelsize=8)
+ax_hd.legend(fontsize=9)
+ax_hd.grid(axis="y", linestyle="--", alpha=0.4)
+
+plt.tight_layout()
+fig_hd.savefig("cds_haircut_distribution.png", dpi=150, bbox_inches="tight")
+print("Saved to cds_haircut_distribution.png")
+
+# ── 20. HAIRCUT DISTRIBUTION — Equities ───────────────────────────────────────
+df_eq_hc_dist = df_single[df_single["Collateral_category"] == "Equities"].copy()
+
+eq_hc_dist = (
+    df_eq_hc_dist.groupby("Repo_id")
+    .apply(lambda x: (x["Collateral_value"].sum() - x["Repo_principal"].iloc[0])
+                     / x["Collateral_value"].sum() * 100)
+    .reset_index(name="haircut")
+)
+
+fig_ehd, ax_ehd = plt.subplots(figsize=(12, 5))
+
+ax_ehd.hist(eq_hc_dist["haircut"].dropna(), bins=80, color="#e74c3c", alpha=0.75, edgecolor="white", linewidth=0.3)
+
+p5e  = eq_hc_dist["haircut"].quantile(0.05)
+p50e = eq_hc_dist["haircut"].quantile(0.50)
+p95e = eq_hc_dist["haircut"].quantile(0.95)
+ax_ehd.axvline(p5e,  color="#2c3e50", linewidth=1.5, linestyle="--", label=f"5th pct  ({p5e:.1f}%)")
+ax_ehd.axvline(p50e, color="#2c3e50", linewidth=1.5, linestyle="-",  label=f"Median   ({p50e:.1f}%)")
+ax_ehd.axvline(p95e, color="#2c3e50", linewidth=1.5, linestyle=":",  label=f"95th pct ({p95e:.1f}%)")
+
+ax_ehd.set_title("Haircut Distribution — Equities Repos",
+                 fontsize=11, fontweight="bold", pad=12)
+ax_ehd.set_xlabel("Haircut (%)", fontsize=9)
+ax_ehd.set_ylabel("Number of Repos", fontsize=9)
+ax_ehd.tick_params(labelsize=8)
+ax_ehd.legend(fontsize=9)
+ax_ehd.grid(axis="y", linestyle="--", alpha=0.4)
+
+plt.tight_layout()
+fig_ehd.savefig("eq_haircut_distribution.png", dpi=150, bbox_inches="tight")
+print("Saved to eq_haircut_distribution.png")

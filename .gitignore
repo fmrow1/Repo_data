@@ -7,3 +7,6 @@ build/nmfp_links_2019_2021_clean.csv
 
 # Session artefacts
 remote_control_qr.png
+
+# macOS
+.DS_Store
